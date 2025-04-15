@@ -86,9 +86,9 @@ int main(int argc, char *argv[])
                     }
                     printf("]\n");
                     
-mascara = _mm256_set_epi32(vector[7], vector[6], vector[5], vector[4],
-                           vector[3], vector[2], vector[1], vector[0]);
-       }
+                    mascara = _mm256_set_epi32(vector[0], vector[1], vector[2], vector[3],
+                                               vector[4], vector[5], vector[6], vector[7]);
+                }
                 else
                 {
                     mascara = _mm256_setr_epi32(-1, -1, -1, -1, -1, -1, -1, -1);
