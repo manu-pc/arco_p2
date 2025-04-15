@@ -25,16 +25,16 @@ int main(int argc, char *argv[])
         a[i] = (float *)aligned_alloc(64, n * sizeof(float));
     }
     float *x_new = (float *)aligned_alloc(64, n * sizeof(float));
-
     for (int i = 0; i < n; i++)
     {
         float row_sum = 0.0;
         for (int j = 0; j < n; j++)
         {
             a[i][j] = (float)rand() / RAND_MAX;
-            row_sum += fabs(a[i][j]);
+            row_sum += a[i][j];
         }
-        a[i][i] = row_sum + 1.0f;
+        a[i][i] += row_sum; // diagonal dominante
+        // Lo es por filas cuando, para todas las filas, el valor absoluto del elemento de la diagonal de esa fila es estrictamente mayor que la norma del resto de elementos de esa fila.
     }
 
     float *b = (float *)aligned_alloc(64, n * sizeof(float));
@@ -50,35 +50,31 @@ int main(int argc, char *argv[])
     }
 
     float norm2;
-    int bsize = 2000; // Tamaño de bloque ajustable
+    int bsize = 64; // Tamaño de bloque ajustable
 
     start_counter();
 
     for (iter = 0; iter < max_iter; iter++)
     {
-        norm2 = 0.0f;
-
+        norm2 = 0.0;
         for (int i = 0; i < n; i++)
         {
-            float sigma = 0.0f;
-
-            // Recorrer la matriz en bloques para mejorar la localidad en caché
-            for (int jj = 0; jj < n; jj += bsize) // Bloques de columnas
+            float sigma = 0.0;
+            for (int j = 0; j < n; j++)
             {
-                for (int j = jj; j < jj + bsize && j < n; j++) // Acceso dentro del bloque
+                if (i != j)
                 {
-                    if (i != j)
-                    {
-                        sigma += a[i][j] * x[j];
-                    }
+                    sigma += a[i][j] * x[j];
                 }
             }
-
             x_new[i] = (b[i] - sigma) / a[i][i];
             norm2 += (x_new[i] - x[i]) * (x_new[i] - x[i]);
+        }
+        // x = x_new
+        for (int i = 0; i < n; i++)
+        {
             x[i] = x_new[i];
         }
-
         if (sqrt(norm2) < tol)
         {
             tiempo = get_counter();

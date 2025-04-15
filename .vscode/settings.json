@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "stdlib.h": "c",
-        "random": "c"
+        "random": "c",
+        "compare": "c",
+        "stdint.h": "c"
     }
 }

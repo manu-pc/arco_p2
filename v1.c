@@ -29,9 +29,9 @@ int main(int argc, char *argv[])
         for (int j = 0; j < n; j++)
         {
             a[i][j] = (float)rand() / RAND_MAX;
-            row_sum += fabs(a[i][j]);
+            row_sum += a[i][j];
         }
-        a[i][i] = row_sum + 1.0; // diagonal dominante
+        a[i][i] += row_sum; // diagonal dominante
         // Lo es por filas cuando, para todas las filas, el valor absoluto del elemento de la diagonal de esa fila es estrictamente mayor que la norma del resto de elementos de esa fila.
     }
 
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     float *x = malloc(n * sizeof(float));
     for (int i = 0; i < n; i++)
     {
-        x[i] = 0;
+        x[i] = 0.0f;
     }
     float *x_new = malloc(n * sizeof(float));
     float norm2;
