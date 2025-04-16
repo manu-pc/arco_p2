@@ -62,11 +62,13 @@ int main(int argc, char *argv[])
             float sigma = 0.0;
             for (int j = 0; j < n; j++)
             {
-                if (i != j)
-                {
+                
+                if (i!=j)
                     sigma += a[i][j] * x[j];
-                }
+                
             }
+            
+            //sigma -= a[i][i]*x[i];
             x_new[i] = (b[i] - sigma) / a[i][i];
             norm2 += (x_new[i] - x[i]) * (x_new[i] - x[i]);
         }
@@ -80,6 +82,11 @@ int main(int argc, char *argv[])
             tiempo = get_counter();
             printf("Converge en %d iteraciones.\n", iter);
             break;
+        }
+                else {
+            if (iter < max_iter){
+                printf("iter: %d, norm2: %.14f, sqrt(norm2): %.14f, tol: %.14f\n", iter, norm2, sqrt(norm2), tol);
+            }
         }
     }
 
