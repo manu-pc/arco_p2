@@ -7,14 +7,12 @@
 #define k 8
 
 int main(int argc, char *argv[]) {
-    float tiempo = -1;
     if (argc < 2) {
-        printf("Uso: %s <N> <t>\n", argv[0]);
+        printf("Uso: %s <N>\n", argv[0]);
         return 1;
     }
     
     int N = atoi(argv[1]);
-	int t = atoi(argv[2]);
     float **a = (float **)aligned_alloc(64, N * sizeof(float *));
     if (!a) {
         printf("Error al asignar memoria para la matriz.\n");
@@ -65,9 +63,9 @@ int main(int argc, char *argv[]) {
     float norm2;
     for (iter = 0; iter < max_iter; iter++) {
         norm2 = 0.0;
-       
- int j;
-        #pragma omp parallel private(j) reduction(+:norm2)  num_threads(t)
+        int j;
+        /* Este trozo lo hace sin sections y va mas lento
+        #pragma omp parallel private(j) reduction(+:norm2) 
         {
         #pragma omp for
             for (int i = 0; i < N; i++) {
@@ -81,19 +79,22 @@ int main(int argc, char *argv[]) {
                 
                 x_new[i] = (b[i] - sigma) / a[i][i];
                 norm2 += (x_new[i] - x[i]) * (x_new[i] - x[i]);
-                x[i] = x_new[i];
+                //x[i] = x_new[i];
             }
         }
         
         
-    
-        /* Este trozo hace sections y va m as rapido
-        #pragma omp parallel private(j) reduction(+:norm2) num_threads(t)
+        #pragma omp parallel for
+        for (int i = 0; i < N; i++) {
+            x[i] = x_new[i];
+        }*/
+        //Este trozo hace sections y va m as rapido
+        #pragma omp parallel private(j) reduction(+:norm2) 
         {
                 #pragma omp sections
                 {
                     // Sección 1: Calcular sigma y actualizar x_new
-                    #pragma omp sections
+                    #pragma omp section
                     {
                         for (int i = 0; i < N; i++) {
                             double sigma = 0.0;
@@ -107,29 +108,30 @@ int main(int argc, char *argv[]) {
 
                             x_new[i] = (b[i] - sigma) / a[i][i];
                             norm2 += (x_new[i] - x[i]) * (x_new[i] - x[i]);
-                            x[i] = x_new[i];
+                        }
+                    }
 
+                    // Sección 2: Actualizar el vector x
+                    #pragma omp section
+                    {
+                        for (int i = 0; i < N; i++) {
+                            x[i] = x_new[i];
                         }
                     }
                 }
             
-        }*/
+        }
         
-        if (sqrt(norm2) < tol)
-        {
-            tiempo = get_counter();
-            printf("Converge en %d iteraciones.\n", iter);
+        if (sqrt(norm2) < tol) {
             break;
         }
     }
-
-    if (tiempo == -1)
-    {
-        tiempo = get_counter();
-        printf("Se ha alcanzado el máximo de iteraciones (%d) sin llegar a la solución.\n", iter);
-    }
-    printf("Tiempo: %.10f (~%.2f segundos)\n", tiempo, tiempo/10e8);
-    printf("Norm\u00b2: %.14f\n", norm2);
+    
+    double mh = get_counter();
+    
+    printf("Ciclos: %f\n", mh);
+    printf("Valor de norm2: %.8f\n", norm2);
+    printf("Iteraciones: %d\n\n", iter);
     
     free(x_new);
     for (int i = 0; i < N; i++) {
@@ -141,3 +143,4 @@ int main(int argc, char *argv[]) {
     
     return 0;
 }
+
