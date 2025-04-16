@@ -49,11 +49,12 @@ int main(int argc, char *argv[])
     }
 
     int j;
+    float norm2;
     __m256 av, xv, cv;
     start_counter();
     for (iter = 0; iter < max_iter; iter++)
     {
-        float norm2 = 0.0f;
+        norm2 = 0.0f;
         for (int i = 0; i < n; i++)
         {
             float sigma = 0.0f;
@@ -71,42 +72,64 @@ int main(int argc, char *argv[])
                 }
                 __m256i mask = _mm256_setr_epi32(vector_mask[0], vector_mask[1], vector_mask[2], vector_mask[3], vector_mask[4], vector_mask[5], vector_mask[6], vector_mask[7]);
                 av = _mm256_maskload_ps(&a[i][j], mask);
-                
-                if (i - 8 <= j <= i)
-                {
-                    printf("i: %d, j: %d, vector_mask: [", i, j);
-                    for (int k = 0; k < 8; k++)
-                    {
-                        printf("%d", vector_mask[k]);
-                        if (k < 7)
-                            printf(", ");
-                    }
-                    printf("]\n");
-
-                    _Alignas(32) int mask_array[8];
-                    _mm256_store_si256((__m256i *)mask_array, mask);
-                    printf("Mask: [");
-                    for (int k = 0; k < 8; k++)
-                    {
-                        printf("%d", mask_array[k]);
-                        if (k < 7)
-                            printf(", ");
-                    }
-                    printf("]\n");
-
-                    _Alignas(32) float av_array[8];
-                    _mm256_store_ps(av_array, av);
-                    printf("av: [");
-                    for (int k = 0; k < 8; k++)
-                    {
-                        printf("%f", av_array[k]);
-                        if (k < 7)
-                            printf(", ");
-                    }
-                    printf("]\n");
-                }
                 xv = _mm256_load_ps(&x[j]);
                 cv = _mm256_mul_ps(av, xv);
+                // if ((i - 8 <= j) && (j <= i))
+                // {
+                //     printf("i: %d, j: %d, vector_mask: [", i, j);
+                //     for (int k = 0; k < 8; k++)
+                //     {
+                //         printf("%d", vector_mask[k]);
+                //         if (k < 7)
+                //             printf(", ");
+                //     }
+                //     printf("]\n");
+
+                //     _Alignas(32) int mask_array[8];
+                //     _mm256_store_si256((__m256i *)mask_array, mask);
+                //     printf("Mask: [");
+                //     for (int k = 0; k < 8; k++)
+                //     {
+                //         printf("%d", mask_array[k]);
+                //         if (k < 7)
+                //             printf(", ");
+                //     }
+                //     printf("]\n");
+
+                //     _Alignas(32) float av_array[8];
+                //     _mm256_store_ps(av_array, av);
+                //     printf("av: [");
+                //     for (int k = 0; k < 8; k++)
+                //     {
+                //         printf("%f", av_array[k]);
+                //         if (k < 7)
+                //             printf(", ");
+                //     }
+                //     printf("]\n");
+
+                //     _Alignas(32) float xv_array[8];
+                //     _mm256_store_ps(xv_array, xv);
+                //     printf("xv: [");
+                //     for (int k = 0; k < 8; k++)
+                //     {
+                //         printf("%f", xv_array[k]);
+                //         if (k < 7)
+                //             printf(", ");
+                //     }
+                //     printf("]\n");
+
+                //     _Alignas(32) float cv_array[8];
+                //     _mm256_store_ps(cv_array, cv);
+                //     printf("cv: [");
+                //     for (int k = 0; k < 8; k++)
+                //     {
+                //         printf("%f", cv_array[k]);
+                //         if (k < 7)
+                //             printf(", ");
+                //     }
+                //     printf("]\n");
+                // }
+
                 _Alignas(32) float vector_temp[8];
                 _mm256_store_ps(vector_temp, cv);
                 for (int k = 0; k < 8; k++)
@@ -125,16 +148,25 @@ int main(int argc, char *argv[])
             x_new[i] = (b[i] - sigma) / a[i][i];
             norm2 += (x_new[i] - x[i]) * (x_new[i] - x[i]);
         }
+
+        for (int i = 0; i < n; i++)
+        {
+            x[i] = x_new[i];
+        }
         if (sqrt(norm2) < tol)
         {
-            printf("Iterations: %d\n", iter);
             tiempo = get_counter();
-            printf("Norm: %f\n", sqrt(norm2));
-            printf("Time: %f\n", tiempo);
-            exit(0);
+            printf("Converge en %d iteraciones.\n", iter);
+            break;
         }
     }
-    tiempo = get_counter();
-    printf("Time: %f\n", tiempo);
+    if (tiempo == -1)
+    {
+        tiempo = get_counter();
+        printf("Se ha alcanzado el máximo de iteraciones (%d) sin llegar a la solución.\n", iter);
+    }
+    printf("N: %d. Tiempo: %.10f (~%.2f segundos)\n", n, tiempo, tiempo / 10e8);
+    printf("Norm\u00b2: %.14f\n", norm2);
+
     exit(0);
 }
