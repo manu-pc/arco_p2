@@ -138,3 +138,28 @@ int main(int argc, char *argv[])
     printf("Time: %f\n", tiempo);
     exit(0);
 }
+
+SHORTCUTS=(bases coga soii xfe arcomp deso)
+
+for name in "${SHORTCUTS[@]}"; do
+    eval "
+    $name() {
+        cd ~/Documentos/$name/\${1:+\$1/}
+    }
+    "
+done
+
+_complete_subdirs() {
+    local cur=${COMP_WORDS[COMP_CWORD]}
+    local cmd=${COMP_WORDS[0]}
+    
+    if [[ " ${SHORTCUTS[*]} " =~ " $cmd " ]]; then
+        local base_dir=~/Documentos/$cmd
+        COMPREPLY=($(compgen -d "$base_dir/$cur" | sed "s|$base_dir/||"))
+    fi
+}
+
+for name in "${SHORTCUTS[@]}"; do
+    complete -F _complete_subdirs "$name"
+done
+
