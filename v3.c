@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stddef.h>
 #include <immintrin.h>
+#include <stdalign.h>
 
 int main(int argc, char *argv[])
 {
@@ -47,90 +48,32 @@ int main(int argc, char *argv[])
     {
         x[i] = 0;
     }
+    alignas(32) float diagonal[n];
 
     int j;
     float norm2;
     __m256 av, xv, cv;
+
     start_counter();
     for (iter = 0; iter < max_iter; iter++)
     {
         norm2 = 0.0f;
         for (int i = 0; i < n; i++)
         {
+            if (iter == 0)
+            {
+                diagonal[i] = a[i][i];
+                a[i][i] = 0.0f;
+            }
             float sigma = 0.0f;
             for (j = 0; j < n - 8; j += 8)
             {
-                _Alignas(32) int vector_mask[8];
-                for (int k = 0; k < 8; k++)
-                {
-                    if (j + k == i)
-                    {
-                        vector_mask[k] = 69; // bit mas alto --> 0 --> no leer
-                    }
-                    else
-                        vector_mask[k] = -69; // bit mas alto --> 1 --> leer
-                }
-                __m256i mask = _mm256_setr_epi32(vector_mask[0], vector_mask[1], vector_mask[2], vector_mask[3], vector_mask[4], vector_mask[5], vector_mask[6], vector_mask[7]);
-                av = _mm256_maskload_ps(&a[i][j], mask);
+
+                av = _mm256_load_ps(&a[i][j]);
                 xv = _mm256_load_ps(&x[j]);
                 cv = _mm256_mul_ps(av, xv);
-                // if ((i - 8 <= j) && (j <= i))
-                // {
-                //     printf("i: %d, j: %d, vector_mask: [", i, j);
-                //     for (int k = 0; k < 8; k++)
-                //     {
-                //         printf("%d", vector_mask[k]);
-                //         if (k < 7)
-                //             printf(", ");
-                //     }
-                //     printf("]\n");
 
-                //     _Alignas(32) int mask_array[8];
-                //     _mm256_store_si256((__m256i *)mask_array, mask);
-                //     printf("Mask: [");
-                //     for (int k = 0; k < 8; k++)
-                //     {
-                //         printf("%d", mask_array[k]);
-                //         if (k < 7)
-                //             printf(", ");
-                //     }
-                //     printf("]\n");
-
-                //     _Alignas(32) float av_array[8];
-                //     _mm256_store_ps(av_array, av);
-                //     printf("av: [");
-                //     for (int k = 0; k < 8; k++)
-                //     {
-                //         printf("%f", av_array[k]);
-                //         if (k < 7)
-                //             printf(", ");
-                //     }
-                //     printf("]\n");
-
-                //     _Alignas(32) float xv_array[8];
-                //     _mm256_store_ps(xv_array, xv);
-                //     printf("xv: [");
-                //     for (int k = 0; k < 8; k++)
-                //     {
-                //         printf("%f", xv_array[k]);
-                //         if (k < 7)
-                //             printf(", ");
-                //     }
-                //     printf("]\n");
-
-                //     _Alignas(32) float cv_array[8];
-                //     _mm256_store_ps(cv_array, cv);
-                //     printf("cv: [");
-                //     for (int k = 0; k < 8; k++)
-                //     {
-                //         printf("%f", cv_array[k]);
-                //         if (k < 7)
-                //             printf(", ");
-                //     }
-                //     printf("]\n");
-                // }
-
-                _Alignas(32) float vector_temp[8];
+                alignas(32) float vector_temp[8];
                 _mm256_store_ps(vector_temp, cv);
                 for (int k = 0; k < 8; k++)
                 {
@@ -145,10 +88,9 @@ int main(int argc, char *argv[])
                 }
             }
 
-            x_new[i] = (b[i] - sigma) / a[i][i];
+            x_new[i] = (b[i] - sigma) / diagonal[i];
             norm2 += (x_new[i] - x[i]) * (x_new[i] - x[i]);
         }
-
         for (int i = 0; i < n; i++)
         {
             x[i] = x_new[i];
