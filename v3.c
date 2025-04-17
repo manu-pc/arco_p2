@@ -95,20 +95,20 @@ int main(int argc, char *argv[])
         {
             x[i] = x_new[i];
         }
-        if (sqrt(norm2) < tol)
-        {
+        if (sqrt(norm2) < tol){
             tiempo = get_counter();
-            printf("Converge en %d iteraciones.\n", iter);
             break;
         }
     }
+    
+
     if (tiempo == -1)
     {
         tiempo = get_counter();
-        printf("Se ha alcanzado el máximo de iteraciones (%d) sin llegar a la solución.\n", iter);
     }
-    printf("N: %d. Tiempo: %.10f (~%.2f segundos)\n", n, tiempo, tiempo / 10e8);
-    printf("Norm\u00b2: %.14f\n", norm2);
+
+    printf("Norma final: %e\n", sqrt(norm2));
+    printf("Número de ciclos: %.2lf\n", tiempo);
 
     exit(0);
 }

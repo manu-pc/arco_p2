@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
     int iter = 0;
     srand(n);
 
+    //? Mejora 1: uso de aligned_alloc con el tamaño de línea caché
     float **a = (float **)aligned_alloc(64, n * sizeof(float *));
     for (int i = 0; i < n; i++)
     {
@@ -50,7 +51,6 @@ int main(int argc, char *argv[])
     }
 
     float norm2;
-    int bsize = 64; // Tamaño de bloque ajustable
 
     start_counter();
 
@@ -60,42 +60,83 @@ int main(int argc, char *argv[])
         for (int i = 0; i < n; i++)
         {
             float sigma = 0.0;
-            for (int j = 0; j < n; j++)
-            {
+            //? Mejora 2: se guarda la posición a[i] para no calcularla en todas las iteraciones
+            float *a_temp = a[i];
 
-                if (i != j)
-                    sigma += a[i][j] * x[j];
+            //? Mejora 3: desdoblamiento del bucle principal sumando los datos de 8 en 8
+            //? Mejora 4: separación del bucle en dos etapas, de 'j' a 'i' y de 'i' a 'n'.
+            //? Esto permite omitir todas las comparaciones de (i!=j)
+            for (int j = 0; j <= i - 8; j += 8)
+            {
+                sigma += a_temp[j] * x[j];
+                sigma += a_temp[j + 1] * x[j + 1];
+                sigma += a_temp[j + 2] * x[j + 2];
+                sigma += a_temp[j + 3] * x[j + 3];
+                sigma += a_temp[j + 4] * x[j + 4];
+                sigma += a_temp[j + 5] * x[j + 5];
+                sigma += a_temp[j + 6] * x[j + 6];
+                sigma += a_temp[j + 7] * x[j + 7];
+            }
+            // Por si n no es divisible entre 8
+            for (int j = i - (i % 8); j < i; j++)
+            {
+                sigma += a_temp[j] * x[j];
             }
 
-            // sigma -= a[i][i]*x[i];
+            // Se continúa, de i+1 a n, habiendo saltado el punto de conflicto i==j
+            for (int j = i + 1; j <= n - 8; j += 8)
+            {
+                sigma += a_temp[j] * x[j];
+                sigma += a_temp[j + 1] * x[j + 1];
+                sigma += a_temp[j + 2] * x[j + 2];
+                sigma += a_temp[j + 3] * x[j + 3];
+                sigma += a_temp[j + 4] * x[j + 4];
+                sigma += a_temp[j + 5] * x[j + 5];
+                sigma += a_temp[j + 6] * x[j + 6];
+                sigma += a_temp[j + 7] * x[j + 7];
+            }
+            for (int j = n - (n - i - 1) % 8; j < n; j++)
+            {
+                if (j > i)
+                    sigma += a_temp[j] * x[j];
+            }
+
             x_new[i] = (b[i] - sigma) / a[i][i];
             norm2 += (x_new[i] - x[i]) * (x_new[i] - x[i]);
         }
-        // x = x_new
-        for (int i = 0; i < n; i++)
+
+        //? Mejora 5: desdoblamiento del bucle de x=x_new
+        for (int i = 0; i < n - 7; i += 8)
+        {
+            x[i] = x_new[i];
+            x[i + 1] = x_new[i + 1];
+            x[i + 2] = x_new[i + 2];
+            x[i + 3] = x_new[i + 3];
+            x[i + 4] = x_new[i + 4];
+            x[i + 5] = x_new[i + 5];
+            x[i + 6] = x_new[i + 6];
+            x[i + 7] = x_new[i + 7];
+        }
+        for (int i = n - (n % 8); i < n; i++)
         {
             x[i] = x_new[i];
         }
-        if (sqrt(norm2) < tol)
+
+        //? Mejora 6: se omite sqrt porque es una operación más costosa que un producto.
+        if (norm2 < tol * tol)
         {
             tiempo = get_counter();
-            printf("Converge en %d iteraciones.\n", iter);
             break;
         }
-        //         else {
-        //     if (iter < max_iter){
-        //         printf("iter: %d, norm2: %.14f, sqrt(norm2): %.14f, tol: %.14f\n", iter, norm2, sqrt(norm2), tol);
-        //     }
-        // }
     }
 
     if (tiempo == -1)
     {
         tiempo = get_counter();
-        printf("Se ha alcanzado el máximo de iteraciones (%d) sin llegar a la solución.\n", iter);
     }
-    printf("N: %d. Tiempo: %.10f (~%.2f segundos)\n", n, tiempo, tiempo / 10e8);
-    printf("Norm\u00b2: %.14f\n", norm2);
+
+    printf("Norma final: %e\n", sqrt(norm2));
+    printf("Número de ciclos: %.2lf\n", tiempo);
 
     free(a);
     free(b);
